@@ -373,70 +373,165 @@ function group(array, keySelector, valueSelector) {
  *
  *  For more examples see unit tests.
  */
+class CssSelector {
+  constructor() {
+    this.selector = '';
+    this.hasElement = false;
+    this.hasId = false;
+    this.hasPseudoElement = false;
+    this.lastAddedPart = null;
+  }
 
-const cssSelectorBuilder = {
+  // Add a type selector (e.g., 'div')
   element(value) {
-    this.checkOrder(0);
-    this.checkDuplicate('element');
+    if (this.hasElement) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    if (this.lastAddedPart && this.lastAddedPart !== 'start') {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    this.hasElement = true;
     this.selector += value;
-    this.lastPart = 'element';
+    this.lastAddedPart = 'element';
     return this;
-  },
+  }
+
   id(value) {
-    this.checkOrder(1);
-    this.checkDuplicate('id');
+    if (this.hasId) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    if (
+      this.lastAddedPart &&
+      this.lastAddedPart !== 'element' &&
+      this.lastAddedPart !== 'start'
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    this.hasId = true;
     this.selector += `#${value}`;
-    this.lastPart = 'id';
+    this.lastAddedPart = 'id';
     return this;
-  },
+  }
+
   class(value) {
-    this.checkOrder(2);
+    if (
+      this.lastAddedPart &&
+      this.lastAddedPart !== 'id' &&
+      this.lastAddedPart !== 'class' &&
+      this.lastAddedPart !== 'element' &&
+      this.lastAddedPart !== 'start'
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
     this.selector += `.${value}`;
-    this.lastPart = 'class';
+    this.lastAddedPart = 'class';
     return this;
-  },
+  }
+
   attr(value) {
-    this.checkOrder(3);
+    if (
+      this.lastAddedPart &&
+      this.lastAddedPart !== 'class' &&
+      this.lastAddedPart !== 'id' &&
+      this.lastAddedPart !== 'element' &&
+      this.lastAddedPart !== 'start' &&
+      this.lastAddedPart !== 'attr'
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
     this.selector += `[${value}]`;
-    this.lastPart = 'attr';
+    this.lastAddedPart = 'attr';
     return this;
-  },
+  }
+
   pseudoClass(value) {
-    this.checkOrder(4);
+    if (
+      this.lastAddedPart &&
+      this.lastAddedPart !== 'attr' &&
+      this.lastAddedPart !== 'class' &&
+      this.lastAddedPart !== 'id' &&
+      this.lastAddedPart !== 'element' &&
+      this.lastAddedPart !== 'start' &&
+      this.lastAddedPart !== 'pseudoClass'
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
     this.selector += `:${value}`;
-    this.lastPart = 'pseudoClass';
+    this.lastAddedPart = 'pseudoClass';
     return this;
-  },
+  }
+
   pseudoElement(value) {
-    this.checkOrder(5);
-    this.checkDuplicate('pseudoElement');
+    if (this.hasPseudoElement) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    if (
+      this.lastAddedPart &&
+      this.lastAddedPart !== 'pseudoClass' &&
+      this.lastAddedPart !== 'attr' &&
+      this.lastAddedPart !== 'class' &&
+      this.lastAddedPart !== 'id' &&
+      this.lastAddedPart !== 'element' &&
+      this.lastAddedPart !== 'start'
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    this.hasPseudoElement = true;
     this.selector += `::${value}`;
-    this.lastPart = 'pseudoElement';
+    this.lastAddedPart = 'pseudoElement';
     return this;
-  },
+  }
+
+  // Combine selectors (e.g., 'div + p')
   combine(selector1, combinator, selector2) {
     this.selector = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
     return this;
-  },
+  }
+
   stringify() {
     return this.selector;
+  }
+}
+
+const cssSelectorBuilder = {
+  element(value) {
+    return new CssSelector().element(value);
   },
-  checkOrder(expectedOrder) {
-    const order = [
-      'element',
-      'id',
-      'class',
-      'attr',
-      'pseudoClass',
-      'pseudoElement',
-    ];
-    if (order.indexOf(this.lastPart) > expectedOrder)
-      throw new Error('Invalid order');
+  id(value) {
+    return new CssSelector().id(value);
   },
-  checkDuplicate(type) {
-    if (this.lastPart === type) {
-      throw new Error('Duplicate element, id, or pseudoElement');
-    }
+  class(value) {
+    return new CssSelector().class(value);
+  },
+  attr(value) {
+    return new CssSelector().attr(value);
+  },
+  pseudoClass(value) {
+    return new CssSelector().pseudoClass(value);
+  },
+  pseudoElement(value) {
+    return new CssSelector().pseudoElement(value);
+  },
+  combine(selector1, combinator, selector2) {
+    return new CssSelector().combine(selector1, combinator, selector2);
   },
 };
 
