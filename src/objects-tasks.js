@@ -18,11 +18,7 @@
  *    shallowCopy({}) => {}
  */
 function shallowCopy(obj) {
-  const result = {};
-  Object.keys(obj).forEach((key) => {
-    result[key] = obj[key];
-  });
-  return result;
+  return Object.assign({}, obj);
 }
 
 /**
@@ -39,12 +35,8 @@ function shallowCopy(obj) {
 function mergeObjects(objects) {
   const result = {};
   objects.forEach((obj) => {
-    Object.keys(obj).forEach((key) => {
-      if (result[key]) {
-        result[key] += obj[key];
-      } else {
-        result[key] = obj[key];
-      }
+    Object.entries(obj).forEach(([key, value]) => {
+      result[key] = (result[key] || 0) + value;
     });
   });
   return result;
@@ -64,13 +56,9 @@ function mergeObjects(objects) {
  *
  */
 function removeProperties(obj, keys) {
-  const result = {};
-  Object.keys(obj).forEach((key) => {
-    if (!keys.includes(key)) {
-      result[key] = obj[key];
-    }
-  });
-  return result;
+  const copy = { ...obj };
+  keys.forEach((key) => delete copy[key]);
+  return copy;
 }
 
 /**
@@ -233,8 +221,8 @@ function Rectangle(width, height) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { height: 10, width: 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 /**
@@ -248,8 +236,8 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  return Object.setPrototypeOf(JSON.parse(json), proto);
 }
 
 /**
@@ -278,8 +266,14 @@ function fromJSON(/* proto, json */) {
  *      { country: 'Russia',  city: 'Saint Petersburg' }
  *    ]
  */
-function sortCitiesArray(/* arr */) {
-  throw new Error('Not implemented');
+function sortCitiesArray(arr) {
+  return arr.sort((a, b) => {
+    const countryComparison = a.country.localeCompare(b.country);
+    if (countryComparison === 0) {
+      return a.city.localeCompare(b.city);
+    }
+    return countryComparison;
+  });
 }
 
 /**
@@ -312,8 +306,18 @@ function sortCitiesArray(/* arr */) {
  *    "Poland" => ["Lodz"]
  *   }
  */
-function group(/* array, keySelector, valueSelector */) {
-  throw new Error('Not implemented');
+function group(array, keySelector, valueSelector) {
+  const result = new Map();
+  array.forEach((item) => {
+    const key = keySelector(item);
+    const value = valueSelector(item);
+    if (result.has(key)) {
+      result.get(key).push(value);
+    } else {
+      result.set(key, [value]);
+    }
+  });
+  return result;
 }
 
 /**
@@ -371,32 +375,68 @@ function group(/* array, keySelector, valueSelector */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    this.checkOrder(0);
+    this.checkDuplicate('element');
+    this.selector += value;
+    this.lastPart = 'element';
+    return this;
   },
-
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    this.checkOrder(1);
+    this.checkDuplicate('id');
+    this.selector += `#${value}`;
+    this.lastPart = 'id';
+    return this;
   },
-
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    this.checkOrder(2);
+    this.selector += `.${value}`;
+    this.lastPart = 'class';
+    return this;
   },
-
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    this.checkOrder(3);
+    this.selector += `[${value}]`;
+    this.lastPart = 'attr';
+    return this;
   },
-
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    this.checkOrder(4);
+    this.selector += `:${value}`;
+    this.lastPart = 'pseudoClass';
+    return this;
   },
-
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    this.checkOrder(5);
+    this.checkDuplicate('pseudoElement');
+    this.selector += `::${value}`;
+    this.lastPart = 'pseudoElement';
+    return this;
   },
-
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    this.selector = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+    return this;
+  },
+  stringify() {
+    return this.selector;
+  },
+  checkOrder(expectedOrder) {
+    const order = [
+      'element',
+      'id',
+      'class',
+      'attr',
+      'pseudoClass',
+      'pseudoElement',
+    ];
+    if (order.indexOf(this.lastPart) > expectedOrder)
+      throw new Error('Invalid order');
+  },
+  checkDuplicate(type) {
+    if (this.lastPart === type) {
+      throw new Error('Duplicate element, id, or pseudoElement');
+    }
   },
 };
 
